@@ -1,70 +1,124 @@
-import { Image, StyleSheet, Platform } from 'react-native';
-
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-
-export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({ ios: 'cmd + d', android: 'cmd + m' })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
-  );
-}
+import React, { useState,useEffect } from 'react';
+import { StyleSheet, View, FlatList, Text, Image, Modal } from 'react-native';
+import StarRating from '../../components/StarRating'; 
+import ProductDetails from '../../components/ProductDetails'; 
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  header: {
+    width: '100%',
+    height: 80,
+    backgroundColor: '#e21837',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerText: {
+    fontSize: 24,
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  listContainer: {
+    flex: 1,
+  },
+  box: {
+    width: '90%',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    marginBottom: 15,
+    padding: 10,
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  image: {
+    width: 100,
+    height: 100,
+    borderRadius: 10,
+    marginRight: 15,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  productInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  price: {
+    fontSize: 16,
+    color: '#e21837',
+    fontWeight: 'bold',
+  },
+  category: {
+    fontSize: 14,
+    color: '#757575',
+    marginTop: 5,
   },
 });
+
+interface Product {
+  id: number;
+  title: string;
+  price: number;
+  description: string;
+  category: string;
+  image: string;
+  rating: {
+    rate: number;
+    count: number;
+  };
+}
+
+export default function HomeScreen() {
+  const [data, setData] = useState<Product[]>([]);
+  const [error, setError] = useState<string>('');
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  useEffect(() => {
+    fetch('https://fakestoreapi.com/products')
+      .then((response) => response.json())
+      .then((data) => setData(data))
+      .catch((error) => setError(error.message));
+  }, []);
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerText}>Store Menu</Text>
+      </View>
+      <View style={styles.listContainer}>
+        {error ? (
+          <Text>{error}</Text>
+        ) : (
+          <FlatList
+            data={data}
+            renderItem={({ item }) => (
+              <View style={styles.box} onTouchEnd={() => setSelectedProduct(item)}>
+                <Image source={{ uri: item.image }} style={styles.image} />
+                <View style={styles.productInfo}>
+                  <Text style={styles.title}>{item.title}</Text>
+                  <Text style={styles.price}>${item.price}</Text>
+                  <Text style={styles.category}>{item.category}</Text>
+                  <StarRating rating={item.rating.rate} />
+                </View>
+              </View>
+            )}
+            keyExtractor={(item) => item.id.toString()}
+          />
+        )}
+      </View>
+
+      <Modal visible={!!selectedProduct} animationType="slide" onRequestClose={() => setSelectedProduct(null)}>
+        {selectedProduct && (
+          <ProductDetails product={selectedProduct} onClose={() => setSelectedProduct(null)} />
+        )}
+      </Modal>
+    </View>
+  );
+}
